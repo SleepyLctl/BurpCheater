@@ -1,0 +1,68 @@
+# Server-Side Parameter Pollution Checklist
+
+## Overview
+
+Server-side parameter pollution occurs when user input is embedded in server-side requests to internal APIs without proper encoding. This can lead to various issues such as parameter overriding, application behavior modification, or unauthorized data access.
+
+## General Testing
+
+- [ ] **Test user input for parameter pollution**
+  - **Vulnerability:** User inputs like query parameters, form fields, headers, and URL path parameters can be manipulated.
+  - **Test:** Inject syntax characters (e.g., `#`, `&`, `=`) into user inputs and observe the application's behavior.
+  - **Example:** Modify a query string to include characters like `%23foo` or `%26foo=xyz` and analyze the application's response.
+
+## Query String
+
+- [ ] **Truncate query strings**
+  - **Vulnerability:** URL encoding characters like `#` can be used to truncate server-side requests.
+  - **Test:** Use URL-encoded characters to attempt truncation of server-side requests.
+  - **Example:** Test with `GET /userSearch?name=peter%23foo&back=/home` and observe if the server-side request is truncated.
+
+- [ ] **Inject invalid parameters**
+  - **Vulnerability:** Injecting unexpected parameters can affect server-side processing.
+  - **Test:** Use URL-encoded `&` to inject additional parameters.
+  - **Example:** Test with `GET /userSearch?name=peter%26foo=xyz&back=/home` and check how the server handles the extra parameter.
+
+- [ ] **Inject valid parameters**
+  - **Vulnerability:** Adding valid parameters may alter server-side behavior.
+  - **Test:** Add valid parameters to the query string and observe the response.
+  - **Example:** Test with `GET /userSearch?name=peter%26email=foo&back=/home` and review how the server processes the new parameter.
+
+- [ ] **Override existing parameters**
+  - **Vulnerability:** Overriding parameters may lead to unauthorized access or altered behavior.
+  - **Test:** Inject a parameter with the same name as an existing one.
+  - **Example:** Test with `GET /userSearch?name=peter%26name=carlos&back=/home` and observe how the server handles the conflicting parameters.
+
+## REST Paths
+
+- [ ] **Test server-side parameter pollution in REST paths**
+  - **Vulnerability:** Parameters in URL paths can be manipulated to exploit the API.
+  - **Test:** Add path traversal sequences or modify URL path parameters.
+  - **Example:** Test with `GET /edit_profile.php?name=peter%2f..%2fadmin` and check if the server-side path resolves to an unexpected resource.
+
+## Structured Data Formats
+
+- [ ] **Test for parameter pollution in structured data formats (e.g., JSON, XML)**
+  - **Vulnerability:** Manipulating structured data inputs can lead to unintended behavior.
+  - **Test:** Inject unexpected parameters into structured data formats and analyze server responses.
+  - **Example:** Test with `POST /myaccount name=peter","access_level":"administrator` and review if the parameter is improperly processed.
+
+## Automated Tools
+
+- [ ] **Use automated tools to detect parameter pollution**
+  - **Vulnerability:** Automated tools can help identify suspicious input transformations.
+  - **Test:** Run automated scans using tools like Burp Scanner or Backslash Powered Scanner BApp.
+  - **Example:** Utilize Burp Scanner to identify potential parameter pollution issues and analyze results.
+
+## Prevention
+
+- [ ] **Use an allowlist for character encoding**
+  - **Vulnerability:** Lack of encoding can lead to parameter pollution.
+  - **Test:** Ensure that only allowed characters are used and all other inputs are properly encoded.
+  - **Example:** Implement an allowlist and validate user inputs before including them in server-side requests.
+
+- [ ] **Validate and sanitize user inputs**
+  - **Vulnerability:** Insufficient validation or sanitization can lead to parameter pollution.
+  - **Test:** Apply validation and sanitization to user inputs before processing.
+  - **Example:** Implement robust input validation and sanitization routines to prevent injection of malicious parameters.
+

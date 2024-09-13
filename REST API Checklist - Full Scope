@@ -1,137 +1,596 @@
-# API Security Checklist
-
-Checklist of the most important security countermeasures when designing, testing, and releasing your API.
-
----
+# Checklist of the Most Important Security Countermeasures for API Design, Testing, and Release
 
 ## Authentication
 
-- [ ] Don't use `Basic Auth`. Use standard authentication instead (e.g., [JWT](https://jwt.io/)).
-- [ ] Don't reinvent the wheel in `Authentication`, `token generation`, `password storage`. Use the standards.
-- [ ] Use `Max Retry` and jail features in Login.
-- [ ] Use encryption on all sensitive data.
+- [ ] **Don't use `Basic Auth`. Use standard authentication instead (e.g., [JWT](https://jwt.io/))**
+  - **Vulnerability:** Basic Auth transmits credentials in an easily decodable format, making it vulnerable to interception.
+  - **Test:** Implement and verify that the API uses a more secure authentication method like JWT.
+  - **Example:** Check that the API requires and verifies JWT tokens rather than plain username/password credentials.
+
+- [ ] **Don't reinvent the wheel in `Authentication`, `token generation`, `password storage`. Use the standards**
+  - **Vulnerability:** Custom implementations can have security flaws. Use established standards for robustness.
+  - **Test:** Ensure the API uses industry-standard libraries and practices for authentication and token management.
+  - **Example:** Verify that password storage uses bcrypt or Argon2 rather than custom hashing algorithms.
+
+- [ ] **Use `Max Retry` and jail features in Login**
+  - **Vulnerability:** Excessive login attempts can lead to brute force attacks.
+  - **Test:** Confirm that the API limits login attempts and implements account lockout or captcha mechanisms after multiple failed attempts.
+  - **Example:** Attempt multiple login failures and check if the account is temporarily locked or if a captcha is triggered.
+
+- [ ] **Use encryption on all sensitive data**
+  - **Vulnerability:** Unencrypted data can be exposed to unauthorized access.
+  - **Test:** Verify that sensitive data, both in transit and at rest, is encrypted using strong encryption algorithms.
+  - **Example:** Inspect API responses to ensure that sensitive data (like passwords or tokens) is encrypted and not sent in plain text.
 
 ### JWT (JSON Web Token)
 
-- [ ] Use a random complicated key (`JWT Secret`) to make brute forcing the token very hard.
-- [ ] Don't extract the algorithm from the header. Force the algorithm in the backend (`HS256` or `RS256`).
-- [ ] Make token expiration (`TTL`, `RTTL`) as short as possible.
-- [ ] Don't store sensitive data in the JWT payload, it can be decoded [easily](https://jwt.io/#debugger-io).
-- [ ] Avoid storing too much data. JWT is usually shared in headers and they have a size limit.
+- [ ] **Use a random complicated key (`JWT Secret`) to make brute forcing the token very hard**
+  - **Vulnerability:** Weak or predictable keys can be easily brute-forced, compromising token security.
+  - **Test:** Check that the JWT secret is a complex and random string.
+  - **Example:** Verify the complexity of the JWT secret used in the API's configuration.
+
+- [ ] **Don't extract the algorithm from the header. Force the algorithm in the backend (`HS256` or `RS256`)**
+  - **Vulnerability:** Allowing algorithm selection in the header can lead to algorithm switching attacks.
+  - **Test:** Ensure the backend enforces a specific algorithm for JWT and does not rely on client-specified algorithms.
+  - **Example:** Verify that the API only accepts tokens with a predefined algorithm (`HS256` or `RS256`).
+
+- [ ] **Make token expiration (`TTL`, `RTTL`) as short as possible**
+  - **Vulnerability:** Long-lived tokens increase the risk if they are compromised.
+  - **Test:** Check the expiration settings for JWTs and ensure they are set to a short duration.
+  - **Example:** Verify that JWTs have a reasonable expiration time and check if tokens expire as expected.
+
+- [ ] **Don't store sensitive data in the JWT payload, it can be decoded [easily](https://jwt.io/#debugger-io)**
+  - **Vulnerability:** Sensitive data in the JWT payload can be decoded and exposed.
+  - **Test:** Ensure that JWT payloads do not contain sensitive information.
+  - **Example:** Inspect the JWT payload to confirm it does not contain sensitive data like user passwords or API keys.
+
+- [ ] **Avoid storing too much data. JWT is usually shared in headers and they have a size limit**
+  - **Vulnerability:** Large JWTs can exceed size limits and affect performance.
+  - **Test:** Check the size of JWTs and ensure they are kept to a reasonable length.
+  - **Example:** Verify that JWTs do not exceed size limits by checking their size in HTTP headers.
 
 ## Access
 
-- [ ] Limit requests (Throttling) to avoid DDoS / brute-force attacks.
-- [ ] Use HTTPS on server side with TLS 1.2+ and secure ciphers to avoid MITM (Man in the Middle Attack).
-- [ ] Use `HSTS` header with SSL to avoid SSL Strip attacks.
-- [ ] Turn off directory listings.
-- [ ] For private APIs, allow access only from safelisted IPs/hosts.
+- [ ] **Limit requests (Throttling) to avoid DDoS / brute-force attacks**
+  - **Vulnerability:** Unrestricted request rates can lead to Denial of Service or brute force attacks.
+  - **Test:** Verify that the API implements rate limiting and throttling.
+  - **Example:** Perform a high volume of requests to test if the API enforces rate limits or blocks excessive requests.
+
+- [ ] **Use HTTPS on server side with TLS 1.2+ and secure ciphers to avoid MITM (Man in the Middle Attack)**
+  - **Vulnerability:** Lack of HTTPS can expose data to interception and tampering.
+  - **Test:** Confirm that the API is served over HTTPS with TLS 1.2 or higher and uses secure ciphers.
+  - **Example:** Check that the API connection uses HTTPS and inspect the TLS configuration for secure ciphers.
+
+- [ ] **Use `HSTS` header with SSL to avoid SSL Strip attacks**
+  - **Vulnerability:** Without HSTS, users may be vulnerable to SSL stripping attacks.
+  - **Test:** Verify that the `Strict-Transport-Security` (HSTS) header is set in API responses.
+  - **Example:** Check HTTP responses for the `Strict-Transport-Security` header to ensure HSTS is implemented.
+
+- [ ] **Turn off directory listings**
+  - **Vulnerability:** Directory listings can expose sensitive files and directories.
+  - **Test:** Ensure that directory listings are disabled on the server.
+  - **Example:** Attempt to access directory URLs to confirm that directory listings are not enabled.
+
+- [ ] **For private APIs, allow access only from safelisted IPs/hosts**
+  - **Vulnerability:** APIs exposed to the public can be accessed by unauthorized users.
+  - **Test:** Verify that access to private APIs is restricted to safelisted IPs or hosts.
+  - **Example:** Try accessing the API from an IP address not on the safelist and check for access denial.
 
 ## Authorization
 
 ### OAuth
 
-- [ ] Always validate `redirect_uri` server-side to allow only safelisted URLs.
-- [ ] Always try to exchange for code and not tokens (don't allow `response_type=token`).
-- [ ] Use `state` parameter with a random hash to prevent CSRF on the OAuth authorization process.
-- [ ] Define the default scope, and validate scope parameters for each application.
+- [ ] **Always validate `redirect_uri` server-side to allow only safelisted URLs**
+  - **Vulnerability:** Redirect URI manipulation can lead to redirection attacks.
+  - **Test:** Ensure that the `redirect_uri` parameter is validated server-side against a list of safelisted URLs.
+  - **Example:** Attempt to use an unregistered `redirect_uri` and verify that the request is denied.
+
+- [ ] **Always try to exchange for code and not tokens (don't allow `response_type=token`)**
+  - **Vulnerability:** Direct token responses can expose tokens to unauthorized parties.
+  - **Test:** Verify that the API uses the authorization code flow rather than the implicit flow.
+  - **Example:** Ensure the `response_type` is set to `code` and not `token` in OAuth requests.
+
+- [ ] **Use `state` parameter with a random hash to prevent CSRF on the OAuth authorization process**
+  - **Vulnerability:** Missing or predictable `state` parameters can lead to Cross-Site Request Forgery (CSRF) attacks.
+  - **Test:** Check that the `state` parameter is used and is a random, unpredictable value.
+  - **Example:** Verify that the `state` parameter is present and random in OAuth requests and responses.
+
+- [ ] **Define the default scope, and validate scope parameters for each application**
+  - **Vulnerability:** Misconfigured scopes can allow unauthorized access to resources.
+  - **Test:** Ensure that default scopes are defined and validated for each OAuth application.
+  - **Example:** Check that the scope parameters in the authorization request match the expected scopes for the application.
 
 ## Input
 
-- [ ] Use the proper HTTP method according to the operation: `GET (read)`, `POST (create)`, `PUT/PATCH (replace/update)`, and `DELETE (to delete a record)`, and respond with `405 Method Not Allowed` if the requested method isn't appropriate for the requested resource.
-- [ ] Validate `content-type` on request Accept header (Content Negotiation) to allow only your supported format (e.g., `application/xml`, `application/json`, etc.) and respond with `406 Not Acceptable` response if not matched.
-- [ ] Validate `content-type` of posted data as you accept (e.g., `application/x-www-form-urlencoded`, `multipart/form-data`, `application/json`, etc.).
-- [ ] Validate user input to avoid common vulnerabilities (e.g., `XSS`, `SQL-Injection`, `Remote Code Execution`, etc.).
-- [ ] Don't use any sensitive data (`credentials`, `Passwords`, `security tokens`, or `API keys`) in the URL, but use standard Authorization header.
-- [ ] Use only server-side encryption.
-- [ ] Use an API Gateway service to enable caching, Rate Limit policies (e.g., `Quota`, `Spike Arrest`, or `Concurrent Rate Limit`) and deploy APIs resources dynamically.
+- [ ] **Use the proper HTTP method according to the operation: `GET (read)`, `POST (create)`, `PUT/PATCH (replace/update)`, and `DELETE (to delete a record)`, and respond with `405 Method Not Allowed` if the requested method isn't appropriate for the requested resource**
+  - **Vulnerability:** Incorrect HTTP methods can result in unauthorized actions or errors.
+  - **Test:** Verify that the API correctly handles HTTP methods and responds with `405 Method Not Allowed` for unsupported methods.
+  - **Example:** Test an endpoint with unsupported methods and confirm it returns `405 Method Not Allowed`.
+
+- [ ] **Validate `content-type` on request Accept header (Content Negotiation) to allow only your supported format (e.g., `application/xml`, `application/json`, etc.) and respond with `406 Not Acceptable` response if not matched**
+  - **Vulnerability:** Accepting unsupported content types can lead to processing errors or vulnerabilities.
+  - **Test:** Check that the API enforces content negotiation and responds with `406 Not Acceptable` for unsupported formats.
+  - **Example:** Send requests with different `Accept` headers and verify that the API responds with `406 Not Acceptable` for unsupported types.
+
+- [ ] **Validate `content-type` of posted data as you accept (e.g., `application/x-www-form-urlencoded`, `multipart/form-data`, `application/json`, etc.)**
+  - **Vulnerability:** Incorrectly handled content types can lead to data processing issues or security vulnerabilities.
+  - **Test:** Ensure that the API validates the `Content-Type` of incoming data and processes only accepted types.
+  - **Example:** Send data with varied `Content-Type` headers and verify that the API correctly handles or rejects them.
+
+- [ ] **Validate user input to avoid common vulnerabilities (e.g., `XSS`, `SQL-Injection`, `Remote Code Execution`, etc.)**
+  - **Vulnerability:** Insufficient input validation can lead to security vulnerabilities such as XSS or SQL Injection.
+  - **Test:** Check that the API properly sanitizes and validates user input to prevent common attacks.
+  - **Example:** Test for XSS and SQL Injection by sending malicious input and checking for vulnerabilities.
+
+- [ ] **Don't use any sensitive data (`credentials`, `Passwords`, `security tokens`, or `API keys`) in the URL, but use standard Authorization header**
+  - **Vulnerability:** Sensitive data in URLs can be exposed in logs or referrer headers.
+  - **Test:** Ensure that sensitive information is not included in URLs and is instead transmitted via headers.
+  - **Example:** Inspect API requests to confirm that sensitive data is sent in headers rather than URLs.
+
+- [ ] **Use only server-side encryption**
+  - **Vulnerability:** Client-side encryption can be bypassed or compromised.
+  - **Test:** Verify that all sensitive data is encrypted server-side before storage or transmission.
+  - **Example:** Check that encryption is applied to data on the server before it is written to storage.
+
+- [ ] **Use an API Gateway service to enable caching, Rate Limit policies (e.g., `Quota`, `Spike Arrest`, or `Concurrent Rate Limit`) and deploy APIs resources dynamically**
+  - **Vulnerability:** Lack of rate limiting and caching can lead to performance issues or abuse.
+  - **Test:** Ensure that the API uses an API Gateway for caching, rate limiting, and dynamic deployment.
+  - **Example:** Verify that the API Gateway is configured for caching and rate limiting by testing various scenarios.
 
 ## Processing
 
-- [ ] Check if all the endpoints are protected behind authentication to avoid broken authentication process.
-- [ ] User own resource ID should be avoided. Use `/me/orders` instead of `/user/654321/orders`.
-- [ ] Don't auto-increment IDs. Use `UUID` instead.
-- [ ] If you are parsing XML data, make sure entity parsing is not enabled to avoid `XXE` (XML external entity attack).
-- [ ] If you are parsing XML, YAML or any other language with anchors and refs, make sure entity expansion is not enabled to avoid `Billion Laughs/XML bomb` via exponential entity expansion attack.
-- [ ] Use a CDN for file uploads.
-- [ ] If you are dealing with huge amount of data, use Workers and Queues to process as much as possible in background and return response fast to avoid HTTP Blocking.
-- [ ] Do not forget to turn the DEBUG mode OFF.
-- [ ] Use non-executable stacks when available.
+- [ ] **Check if all the endpoints are protected behind authentication to avoid broken authentication process**
+  - **Vulnerability:** Unprotected endpoints can be accessed without proper authentication.
+  - **Test:** Verify that all endpoints require authentication and are not accessible without it.
+  - **Example:** Attempt to access endpoints without authentication and confirm that access is denied.
+
+- [ ] **User own resource ID should be avoided. Use `/me/orders` instead of `/user/654321/orders`**
+  - **Vulnerability:** Predictable or exposed resource IDs can lead to unauthorized access.
+  - **Test:** Ensure that the API uses dynamic identifiers rather than predictable user IDs.
+  - **Example:** Verify that user-specific endpoints use dynamic IDs and do not expose user identifiers.
+
+- [ ] **Don't auto-increment IDs. Use `UUID` instead**
+  - **Vulnerability:** Auto-incremented IDs can be predictable and expose information about the number of records.
+  - **Test:** Ensure that the API uses UUIDs rather than auto-incremented IDs for resource identifiers.
+  - **Example:** Check that resource IDs are UUIDs and not sequential integers.
+
+- [ ] **If you are parsing XML data, make sure entity parsing is not enabled to avoid `XXE` (XML external entity attack)**
+  - **Vulnerability:** Enabled entity parsing in XML can lead to XXE attacks.
+  - **Test:** Verify that XML parsers are configured to disable entity parsing.
+  - **Example:** Send XML payloads with external entities and ensure they are not processed.
+
+- [ ] **If you are parsing XML, YAML or any other language with anchors and refs, make sure entity expansion is not enabled to avoid `Billion Laughs/XML bomb` via exponential entity expansion attack**
+  - **Vulnerability:** Unrestricted entity expansion can lead to resource exhaustion attacks.
+  - **Test:** Check that parsers are configured to prevent entity expansion.
+  - **Example:** Test with payloads that exploit entity expansion and verify that the API handles them safely.
+
+- [ ] **Use a CDN for file uploads**
+  - **Vulnerability:** Direct file uploads to the API can expose it to attacks or abuse.
+  - **Test:** Ensure that file uploads are handled through a CDN to improve performance and security.
+  - **Example:** Verify that files are uploaded through a CDN and not directly to the API server.
+
+- [ ] **If you are dealing with huge amount of data, use Workers and Queues to process as much as possible in background and return response fast to avoid HTTP Blocking**
+  - **Vulnerability:** Large data processing can lead to slow responses and blocking issues.
+  - **Test:** Check that large data operations are handled in the background using workers and queues.
+  - **Example:** Test API responses for large data operations to ensure they are processed asynchronously and do not block the HTTP response.
+
+- [ ] **Do not forget to turn the DEBUG mode OFF**
+  - **Vulnerability:** Debug mode can expose detailed error information that may aid attackers.
+  - **Test:** Ensure that the API’s debug mode is disabled in production environments.
+  - **Example:** Verify that no debug information is exposed in API responses or logs.
+
+- [ ] **Use non-executable stacks when available**
+  - **Vulnerability:** Executable stacks can be exploited to run arbitrary code.
+  - **Test:** Ensure that the API server is configured to use non-executable stacks.
+  - **Example:** Verify server settings to confirm that stack memory is non-executable.
 
 ## Output
 
-- [ ] Send `X-Content-Type-Options: nosniff` header.
-- [ ] Send `X-Frame-Options: deny` header.
-- [ ] Send `Content-Security-Policy: default-src 'none'` header.
-- [ ] Remove fingerprinting headers - `X-Powered-By`, `Server`, `X-AspNet-Version`, etc.
-- [ ] Force `content-type` for your response. If you return `application/json`, then your `content-type` response is `application/json`.
-- [ ] Don't return sensitive data like `credentials`, `passwords`, or `security tokens`.
-- [ ] Return the proper status code according to the operation completed. (e.g., `200 OK`, `400 Bad Request`, `401 Unauthorized`, `405 Method Not Allowed`, etc.).
+- [ ] **Send `X-Content-Type-Options: nosniff` header**
+  - **Vulnerability:** Without this header, browsers may incorrectly interpret the content type.
+  - **Test:** Check that the `X-Content-Type-Options` header is set to `nosniff`.
+  - **Example:** Inspect HTTP responses to ensure the `X-Content-Type-Options` header is present and correctly set.
+
+- [ ] **Send `X-Frame-Options: deny` header**
+  - **Vulnerability:** Missing this header can allow clickjacking attacks.
+  - **Test:** Verify that the `X-Frame-Options` header is set to `deny` in API responses.
+  - **Example:** Check HTTP responses for the `X-Frame-Options: deny` header to prevent clickjacking.
+
+- [ ] **Send `Content-Security-Policy: default-src 'none'` header**
+  - **Vulnerability:** Lack of a content security policy can lead to various attacks, including XSS.
+  - **Test:** Ensure that the `Content-Security-Policy` header is set to restrict sources.
+  - **Example:** Verify that the `Content-Security-Policy` header is implemented with a restrictive policy.
+
+- [ ] **Remove fingerprinting headers - `X-Powered-By`, `Server`, `X-AspNet-Version`, etc.**
+  - **Vulnerability:** Fingerprinting headers can reveal information about server technology, aiding attackers.
+  - **Test:** Ensure that unnecessary fingerprinting headers are removed from responses.
+  - **Example:** Check HTTP responses for the absence of headers that disclose server technology.
+
+- [ ] **Force `content-type` for your response. If you return `application/json`, then your `content-type` response is `application/json`**
+  - **Vulnerability:** Inconsistent content types can lead to misinterpretation of data.
+  - **Test:** Confirm that the `Content-Type` header matches the response format.
+  - **Example:** Verify that the `Content-Type` header is correctly set according to the response data format.
+
+- [ ] **Don't return sensitive data like `credentials`, `passwords`, or `security tokens`**
+  - **Vulnerability:** Exposing sensitive data in responses can lead to security breaches.
+  - **Test:** Ensure that API responses do not include sensitive information.
+  - **Example:** Review API responses to confirm that sensitive data is not included.
+
+- [ ] **Return the proper status code according to the operation completed. (e.g., `200 OK`, `400 Bad Request`, `401 Unauthorized`, `405 Method Not Allowed`, etc.)**
+  - **Vulnerability:** Incorrect status codes can mislead clients and obscure issues.
+  - **Test:** Verify that the API returns appropriate HTTP status codes for different scenarios.
+  - **Example:** Check responses for correct status codes according to the operation and request.
 
 ## CI & CD
 
-- [ ] Audit your design and implementation with unit/integration tests coverage.
-- [ ] Use a code review process and disregard self-approval.
-- [ ] Ensure that all components of your services are statically scanned by AV software before pushing to production, including vendor libraries and other dependencies.
-- [ ] Continuously run security tests (static/dynamic analysis) on your code.
-- [ ] Check your dependencies (both software and OS) for known vulnerabilities.
-- [ ] Design a rollback solution for deployments.
+- [ ] **Audit your design and implementation with unit/integration tests coverage**
+  - **Vulnerability:** Lack of testing can lead to undetected issues in the API.
+  - **Test:** Ensure that the API has comprehensive unit and integration test coverage.
+  - **Example:** Review test coverage reports to confirm adequate testing of API components.
+
+- [ ] **Use a code review process and disregard self-approval**
+  - **Vulnerability:** Self-approval can lead to overlooked issues. Independent reviews provide additional scrutiny.
+  - **Test:** Verify that code reviews are conducted by multiple team members and not just self-approved.
+  - **Example:** Confirm that all code changes go through peer reviews before being merged.
+
+- [ ] **Ensure that all components of your services are statically scanned by AV software before pushing to production, including vendor libraries and other dependencies**
+  - **Vulnerability:** Vulnerabilities in dependencies can affect the security of the API.
+  - **Test:** Check that all components, including dependencies, are scanned for vulnerabilities before deployment.
+  - **Example:** Verify that static analysis tools are used to scan code and dependencies before production.
+
+- [ ] **Continuously run security tests (static/dynamic analysis) on your code**
+  - **Vulnerability:** Security issues may go undetected without continuous testing.
+  - **Test:** Ensure that security tests are regularly run as part of the development process.
+  - **Example:** Check that static and dynamic analysis tools are integrated into the CI/CD pipeline.
+
+- [ ] **Check your dependencies (both software and OS) for known vulnerabilities**
+  - **Vulnerability:** Outdated or vulnerable dependencies can be exploited.
+  - **Test:** Verify that dependency vulnerabilities are checked and addressed.
+  - **Example:** Use tools to scan for known vulnerabilities in dependencies and update as necessary.
+
+- [ ] **Design a rollback solution for deployments**
+  - **Vulnerability:** Without a rollback plan, deployment failures can be difficult to recover from.
+  - **Test:** Ensure that a rollback mechanism is in place for deployment failures.
+  - **Example:** Verify that deployment tools support rollback and test the rollback process.
 
 ## Monitoring
 
-- [ ] Use centralized logins for all services and components.
-- [ ] Use agents to monitor all traffic, errors, requests, and responses.
-- [ ] Use alerts for SMS, Slack, Email, Telegram, Kibana, Cloudwatch, etc.
-- [ ] Ensure that you aren't logging any sensitive data like credit cards, passwords, PINs, etc.
-- [ ] Use an IDS and/or IPS system to monitor your API requests and instances.
+- [ ] **Use centralized logins for all services and components**
+  - **Vulnerability:** Decentralized logging can make it difficult to manage and analyze logs.
+  - **Test:** Ensure that all services and components use a centralized logging system.
+  - **Example:** Verify that logs from all components are aggregated into a central logging platform.
 
+- [ ] **Use agents to monitor all traffic, errors, requests, and responses**
+  - **Vulnerability:** Lack of monitoring can result in missing critical issues or anomalies.
+  - **Test:** Confirm that monitoring agents are deployed to capture traffic, errors, and other important metrics.
+  - **Example:** Check that monitoring agents are correctly configured and data is being collected.
 
--------------
+- [ ] **Use alerts for SMS, Slack, Email, Telegram, Kibana, Cloudwatch, etc.**
+  - **Vulnerability:** Without alerts, critical issues may go unnoticed.
+  - **Test:** Ensure that alerting mechanisms are set up for various channels and are functioning properly.
+  - **Example:** Verify that alerts are configured to notify the appropriate channels for different types of issues.
 
-# API Penetration Testing Checklist
+- [ ] **Ensure that you aren't logging any sensitive data like credit cards, passwords, PINs, etc.**
+  - **Vulnerability:** Logging sensitive data can expose it to unauthorized access.
+  - **Test:** Review logs to ensure that sensitive data is not being recorded.
+  - **Example:** Inspect logs to confirm that sensitive information is excluded and not logged.
+
+- [ ] **Use an IDS and/or IPS system to monitor your API requests and instances**
+  - **Vulnerability:** Without intrusion detection or prevention, malicious activities might go undetected.
+  - **Test:** Verify that IDS/IPS systems are in place and properly configured to monitor API activity.
+  - **Example:** Check that IDS/IPS systems are monitoring API traffic and generating alerts for suspicious activity.
+
+---
+
+# General
 
 ## 1. API Recon
-- [ ] Identify API endpoints (e.g., `/api/books`, `/api/books/mystery`).
-- [ ] Analyze input data the API processes (compulsory and optional parameters).
-- [ ] Determine the types of requests the API accepts (HTTP methods, media formats).
-- [ ] Check rate limits and authentication mechanisms.
-- [ ] Review API documentation (human-readable and machine-readable formats).
-- [ ] Use tools like Burp Scanner to crawl and audit APIs.
-- [ ] Check for API documentation endpoints (e.g., `/swagger/index.html`, `/openapi.json`).
+
+- [ ] **Identify API endpoints**
+  - **Vulnerability:** Misconfigured or exposed endpoints can lead to unintended data access or API misuse.
+  - **Test:** Discover all endpoints by analyzing the API structure and documentation.
+  - **Example:** Access `/api/books` and `/api/books/mystery` to see if they return data or if there are undocumented endpoints.
+
+- [ ] **Analyze input data the API processes**
+  - **Vulnerability:** Insufficient validation or handling of input parameters can lead to injection attacks or unexpected behavior.
+  - **Test:** Examine both compulsory and optional parameters for each API endpoint.
+  - **Example:** Test parameters like `bookId` in `/api/books/{bookId}` for invalid or unexpected values.
+
+- [ ] **Determine the types of requests the API accepts**
+  - **Vulnerability:** Lack of restrictions on allowed HTTP methods or media formats can lead to unauthorized actions.
+  - **Test:** Verify the accepted HTTP methods and media types for each endpoint.
+  - **Example:** Send requests using different methods (GET, POST, PUT) and content types (JSON, XML) to see how the API responds.
+
+- [ ] **Check rate limits and authentication mechanisms**
+  - **Vulnerability:** Inadequate rate limiting or authentication can lead to abuse or unauthorized access.
+  - **Test:** Test API endpoints to see if they enforce rate limits and require proper authentication.
+  - **Example:** Try sending a high volume of requests to check if the API rate limits responses or requires a valid authentication token.
+
+- [ ] **Review API documentation**
+  - **Vulnerability:** Outdated or incomplete documentation can mislead users and expose vulnerabilities.
+  - **Test:** Compare the API documentation with actual behavior to ensure accuracy.
+  - **Example:** Cross-reference endpoints and parameters listed in `/swagger/index.html` with actual API responses.
+
+- [ ] **Use tools like Burp Scanner to crawl and audit APIs**
+  - **Vulnerability:** Failure to audit can leave security flaws undetected.
+  - **Test:** Run automated tools to discover vulnerabilities in API endpoints and interactions.
+  - **Example:** Use Burp Scanner to identify issues such as open endpoints or misconfigurations.
+
+- [ ] **Check for API documentation endpoints**
+  - **Vulnerability:** Exposed documentation endpoints can reveal internal API details or security weaknesses.
+  - **Test:** Locate documentation endpoints and assess their security.
+  - **Example:** Access `/swagger/index.html` or `/openapi.json` and check for any sensitive information or misconfigurations.
 
 ## 2. API Endpoint Interaction
-- [ ] Interact with API endpoints using Burp Repeater and Burp Intruder.
-- [ ] Test for error messages and unexpected behaviors.
-- [ ] Test different HTTP methods (GET, POST, PATCH, DELETE, OPTIONS).
-- [ ] Test for changes in behavior based on HTTP method.
-- [ ] Modify `Content-Type` header to test different content types (JSON, XML).
-- [ ] Use the Content type converter to change between formats (XML, JSON).
+
+- [ ] **Interact with API endpoints using Burp Repeater and Burp Intruder**
+  - **Vulnerability:** Unvalidated inputs or lack of proper handling can be exploited through repeated or automated requests.
+  - **Test:** Use these tools to send repeated or modified requests to test the API's behavior.
+  - **Example:** Send various payloads to an endpoint using Burp Repeater to see if the API handles unexpected inputs properly.
+
+- [ ] **Test for error messages and unexpected behaviors**
+  - **Vulnerability:** Detailed error messages can disclose information about the API's internals or potential vulnerabilities.
+  - **Test:** Induce errors and observe the responses.
+  - **Example:** Send malformed requests and check if the API returns detailed error messages.
+
+- [ ] **Test different HTTP methods**
+  - **Vulnerability:** Unsupported methods or improper handling can lead to unauthorized actions or resource access.
+  - **Test:** Verify how the API responds to various HTTP methods.
+  - **Example:** Send GET, POST, PATCH, DELETE requests to see if the API correctly handles or rejects unsupported methods.
+
+- [ ] **Test for changes in behavior based on HTTP method**
+  - **Vulnerability:** Variations in method handling might expose vulnerabilities or unintended behavior.
+  - **Test:** Compare the API's behavior with different HTTP methods.
+  - **Example:** Check if a DELETE request behaves differently from a GET request on the same endpoint.
+
+- [ ] **Modify `Content-Type` header to test different content types**
+  - **Vulnerability:** APIs may not correctly handle different content types, leading to potential attacks or data corruption.
+  - **Test:** Send requests with varied `Content-Type` headers and observe the responses.
+  - **Example:** Change `Content-Type` to `application/xml` and test if the API processes the data correctly.
+
+- [ ] **Use the Content type converter to change between formats**
+  - **Vulnerability:** Improper format handling can lead to data processing issues or vulnerabilities.
+  - **Test:** Convert between different data formats and test the API’s response.
+  - **Example:** Convert JSON payloads to XML and verify if the API can correctly handle and parse the data.
 
 ## 3. Hidden Endpoints Discovery
-- [ ] Use Burp Intruder to find hidden endpoints.
-- [ ] Add a payload to common path positions to identify hidden resources (e.g., `/api/user/update` -> `/api/user/delete`).
-- [ ] Use wordlists of common API naming conventions and industry terms to find hidden endpoints.
+
+- [ ] **Use Burp Intruder to find hidden endpoints**
+  - **Vulnerability:** Hidden endpoints may expose sensitive data or functionality.
+  - **Test:** Utilize Burp Intruder to probe for endpoints not listed in the documentation.
+  - **Example:** Try payloads such as `/admin`, `/hidden`, or `/debug` to uncover undisclosed endpoints.
+
+- [ ] **Add a payload to common path positions**
+  - **Vulnerability:** Hidden or undocumented endpoints might be accessible through common path variations.
+  - **Test:** Modify endpoint paths with common variations to detect hidden resources.
+  - **Example:** Change `/api/user/update` to `/api/user/delete` to see if an endpoint for user deletion exists.
+
+- [ ] **Use wordlists of common API naming conventions**
+  - **Vulnerability:** Common endpoint names might be exposed if not properly protected.
+  - **Test:** Deploy wordlists to search for endpoints using common naming conventions.
+  - **Example:** Use a wordlist with terms like `/admin`, `/config`, `/settings` to find additional endpoints.
 
 ## 4. Hidden Parameters Discovery
-- [ ] Use Burp Intruder to replace/add common parameters to requests.
-- [ ] Use Param miner BApp to guess up to 65,536 parameter names per request.
-- [ ] Use Burp’s content discovery tools to find hidden parameters in APIs.
+
+- [ ] **Use Burp Intruder to replace/add common parameters**
+  - **Vulnerability:** Hidden parameters can lead to unauthorized access or unexpected behavior.
+  - **Test:** Insert or modify common parameters in requests to test for hidden functionality.
+  - **Example:** Add parameters like `admin=true` to see if it affects the API’s response.
+
+- [ ] **Use Param miner BApp to guess parameter names**
+  - **Vulnerability:** Hidden parameters might not be validated or sanitized properly.
+  - **Test:** Employ tools like Param miner to discover additional parameters.
+  - **Example:** Use Param miner to guess parameter names and analyze responses for unexpected results.
+
+- [ ] **Use Burp’s content discovery tools to find hidden parameters**
+  - **Vulnerability:** Uncovered parameters may expose vulnerabilities or sensitive functionality.
+  - **Test:** Leverage content discovery tools to locate hidden parameters in API responses.
+  - **Example:** Analyze response content to detect any additional parameters not initially visible.
 
 ## 5. Mass Assignment Vulnerability Testing
-- [ ] Check returned objects for hidden parameters (e.g., `isAdmin`, `id`).
-- [ ] Modify hidden parameters in the request body (e.g., `isAdmin = true`).
-- [ ] Test invalid values for hidden parameters and observe API responses.
+
+- [ ] **Check returned objects for hidden parameters**
+  - **Vulnerability:** Mass assignment vulnerabilities allow users to modify fields they shouldn’t have access to.
+  - **Test:** Review API responses for sensitive parameters that shouldn’t be user-modifiable.
+  - **Example:** Observe if parameters like `isAdmin` or `userId` are exposed in API responses.
+
+- [ ] **Modify hidden parameters in the request body**
+  - **Vulnerability:** Unauthorized changes to hidden parameters can lead to privilege escalation or other issues.
+  - **Test:** Alter hidden parameters in the request body and examine API responses.
+  - **Example:** Change `isAdmin` to `true` and check if the API grants admin privileges.
+
+- [ ] **Test invalid values for hidden parameters**
+  - **Vulnerability:** Invalid or unexpected values can reveal how the API handles erroneous inputs.
+  - **Test:** Send invalid values for hidden parameters and observe the API’s response.
+  - **Example:** Test parameters like `age` with negative values or excessively high numbers.
 
 ## 6. Preventing Vulnerabilities in APIs
-- [ ] Secure API documentation if the API is not publicly accessible.
-- [ ] Keep API documentation up to date.
-- [ ] Apply an allowlist of permitted HTTP methods.
-- [ ] Validate expected content types for all API requests and responses.
-- [ ] Use generic error messages to prevent information disclosure.
-- [ ] Ensure security measures are applied to all API versions, not just the production version.
-- [ ] Implement allowlists and blocklists to control which properties can be updated by users.
 
-## Tools and Techniques
-- Burp Suite (Scanner, Repeater, Intruder, Param miner, Content type converter)
-- Postman, SoapUI for interacting and testing APIs
+- [ ] **Secure API documentation if not publicly accessible**
+  - **Vulnerability:** Exposed documentation can reveal API structure and potential vulnerabilities.
+  - **Test:** Ensure API documentation is secured if not intended for public access.
+  - **Example:** Verify that documentation endpoints are protected by authentication or IP restrictions.
+
+- [ ] **Keep API documentation up to date**
+  - **Vulnerability:** Outdated documentation may mislead users or expose vulnerabilities.
+  - **Test:** Regularly review and update API documentation to reflect current API behavior.
+  - **Example:** Compare the latest API changes with the documentation to ensure consistency.
+
+- [ ] **Apply an allowlist of permitted HTTP methods**
+  - **Vulnerability:** Unrestricted HTTP methods can be exploited to perform unauthorized actions.
+  - **Test:** Implement and enforce an allowlist for HTTP methods on each endpoint.
+  - **Example:** Verify that methods like PUT or DELETE are only allowed where explicitly intended.
+
+- [ ] **Validate expected content types for all API requests and responses**
+  - **Vulnerability:** Mismatched content types can lead to processing errors or security issues.
+  - **Test:** Ensure that the API enforces proper content type validation.
+  - **Example:** Send requests with incorrect `Content-Type` headers and check if the API rejects them.
+
+- [ ] **Use generic error messages to prevent information disclosure**
+  - **Vulnerability:** Detailed error messages can reveal sensitive information about the API.
+  - **Test:** Ensure error messages do not expose implementation details.
+  - **Example:** Verify that error responses are generic and do not include stack traces or internal details.
+
+- [ ] **Ensure security measures are applied to all API versions**
+  - **Vulnerability:** Security flaws in deprecated or unsupported API versions can
+
+---
+
+# JWT Vulnerabilities
+
+## Introduction
+
+JSON Web Tokens (JWTs) are commonly used in web applications for authentication and session management. While JWTs provide a compact and self-contained way to transmit information, security issues arise when they are improperly implemented or misconfigured. These issues can lead to various attacks, such as token forgery, unauthorized access, and privilege escalation, which make JWT security critical for protecting web applications.
+
+### Key Points
+1. **Authentication Risks**: JWTs can be exploited to bypass authentication controls, allowing attackers to impersonate users or escalate privileges.
+2. **Session Hijacking**: Insecure JWT storage or transmission can lead to session hijacking attacks.
+3. **Token Forgery**: Poor implementation of JWT signature verification allows attackers to forge tokens.
+4. **Token Tampering**: Vulnerabilities in algorithms or key management can allow attackers to modify JWTs.
+5. **Sensitive Information Leakage**: Poorly secured JWTs may expose sensitive information, leading to privacy violations.
+
+---
+
+## JWT Vulnerability Pentesting Checklist
+
+- [ ] **1. Unverified Signature**
+  - **Vulnerability**: The JWT signature is not properly verified.
+  - **Test**: Remove or tamper with the JWT signature and check if the application accepts it.
+  - **Example**:
+    ```json
+    {
+      "alg": "none"
+    }
+    ```
+    Send this unsigned token and observe if access is still granted.
+
+- [ ] **2. None Algorithm Bypass**
+  - **Vulnerability**: The server accepts JWTs signed with the `none` algorithm, which bypasses signature verification.
+  - **Test**: Change the `alg` header to `none` and remove the signature, then try to use the token.
+  - **Example**:
+    ```json
+    {
+      "alg": "none"
+    }
+    ```
+    Token: 
+    ```
+    eyJhbGciOiJub25lIn0.eyJpc3MiOiJleGFtcGxlIn0.
+    ```
+
+- [ ] **3. Weak Secret Key (HS256)**
+  - **Vulnerability**: Weak or guessable HMAC secret key is used for signing JWTs.
+  - **Test**: Attempt to brute-force the HMAC secret using tools like `hashcat` or `jwt-cracker`.
+  - **Example**:
+    ```bash
+    hashcat -a 0 -m 16500 <jwt_token> <wordlist>
+    ```
+
+- [ ] **4. Algorithm Confusion (RS256 to HS256)**
+  - **Vulnerability**: Switching the algorithm from `RS256` (asymmetric) to `HS256` (symmetric) and signing with the server's public key.
+  - **Test**: Modify the algorithm in the header from `RS256` to `HS256`, then sign the token with the server's public key as the HMAC secret.
+  - **Example**:
+    Original header:
+    ```json
+    {
+      "alg": "RS256"
+    }
+    ```
+    Modified header:
+    ```json
+    {
+      "alg": "HS256"
+    }
+    ```
+
+- [ ] **5. Algorithm Confusion Attacks**
+  - **Vulnerability**: Attackers exploit algorithm confusion by forcing the server to verify a JWT using a different algorithm than intended.
+  - **Test**: Change the `alg` header from `RS256` to `HS256`, sign the token using the server’s public key as the HMAC secret, and attempt to use the token.
+
+- [ ] **6. Key Injection via `kid` Header**
+  - **Vulnerability**: Key ID (`kid`) parameter is vulnerable to directory traversal or arbitrary file inclusion, allowing signature bypass.
+  - **Test**: Try injecting file paths into the `kid` parameter, e.g., `/dev/null`, and sign the token with an empty key.
+  - **Example**:
+    ```json
+    {
+      "kid": "../../../../../../dev/null",
+      "alg": "HS256"
+    }
+    ```
+
+- [ ] **7. JWK Header Injection**
+  - **Vulnerability**: Injecting a custom public key via the `jwk` header to trick the server into verifying the token using the attacker's key.
+  - **Test**: Add a `jwk` parameter containing an attacker’s public key in the JWT header.
+  - **Example**:
+    ```json
+    {
+      "alg": "RS256",
+      "jwk": {
+        "kty": "RSA",
+        "n": "<your-public-key-modulus>",
+        "e": "AQAB"
+      }
+    }
+    ```
+
+- [ ] **8. JWK Set URL (`jku`) Injection**
+  - **Vulnerability**: The `jku` header allows the server to retrieve a malicious key set from an arbitrary URL controlled by the attacker.
+  - **Test**: Insert a custom `jku` header pointing to a malicious JWK Set hosted on a controlled server.
+  - **Example**:
+    ```json
+    {
+      "alg": "RS256",
+      "jku": "http://attacker.com/jwks.json"
+    }
+    ```
+
+- [ ] **9. Replay Attack**
+  - **Vulnerability**: JWTs are reused without proper invalidation, leading to session hijacking.
+  - **Test**: Capture a valid JWT and try reusing it after the user logs out or the session should be invalid.
+  - **Example**: Replay the same JWT after a logout event. If the server still accepts it, the application is vulnerable.
+
+- [ ] **10. Expired or Invalid Token Acceptance**
+  - **Vulnerability**: The server accepts expired or tampered tokens without proper validation.
+  - **Test**: Modify the `exp` (expiration) claim to a past time or tamper with claims and check if the token is still valid.
+  - **Example**:
+    ```json
+    {
+      "exp": 1600000000
+    }
+    ```
+
+- [ ] **11. JWT Stored in Local Storage (XSS Risk)**
+  - **Vulnerability**: Storing JWTs in browser local storage exposes them to XSS attacks.
+  - **Test**: Look for JWTs stored in local storage using browser developer tools or attempt an XSS payload injection.
+  - **Example**: If an XSS vulnerability exists, an attacker can execute:
+    ```javascript
+    console.log(localStorage.getItem("jwt_token"));
+    ```
+
+- [ ] **12. JWT in URL (Leakage via Referrer Headers)**
+  - **Vulnerability**: Storing JWTs in URLs (e.g., as a query parameter) exposes them to referrer leakage.
+  - **Test**: Check if the JWT is passed in the URL, and inspect HTTP headers to see if the referrer leaks the token.
+  - **Example**:
+    ```
+    https://example.com?token=eyJhbGciOi...
+    ```
+
+- [ ] **13. Insecure Token Revocation**
+  - **Vulnerability**: The server does not properly revoke JWTs, allowing them to remain valid even after logout or expiration.
+  - **Test**: Attempt to reuse a token after the session is terminated, and check if it is still accepted.
+  - **Example**: Use a captured JWT after the user has logged out and observe if access is still granted.
+
+---
+
+## How to Prevent JWT Attacks
+
+- [ ] **Use an up-to-date JWT library**
+- [ ] **Enforce strict signature verification**
+- [ ] **Restrict the `jku` header**
+- [ ] **Secure the `kid` header**
+- [ ] **Set expiration dates for tokens**
+- [ ] **Avoid sending tokens via URL parameters**
+- [ ] **Use the `aud` claim**
+- [ ] **Enable token revocation**
+
 

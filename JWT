@@ -1,0 +1,156 @@
+# JWT Vulnerabilities
+
+## Introduction
+
+JSON Web Tokens (JWTs) are commonly used in web applications for authentication and session management. While JWTs provide a compact and self-contained way to transmit information, security issues arise when they are improperly implemented or misconfigured. These issues can lead to various attacks, such as token forgery, unauthorized access, and privilege escalation, which make JWT security critical for protecting web applications.
+
+### Key Points
+1. **Authentication Risks**: JWTs can be exploited to bypass authentication controls, allowing attackers to impersonate users or escalate privileges.
+2. **Session Hijacking**: Insecure JWT storage or transmission can lead to session hijacking attacks.
+3. **Token Forgery**: Poor implementation of JWT signature verification allows attackers to forge tokens.
+4. **Token Tampering**: Vulnerabilities in algorithms or key management can allow attackers to modify JWTs.
+5. **Sensitive Information Leakage**: Poorly secured JWTs may expose sensitive information, leading to privacy violations.
+
+---
+
+## JWT Vulnerability Pentesting Checklist
+
+- [ ] **1. Unverified Signature**
+  - **Vulnerability**: The JWT signature is not properly verified.
+  - **Test**: Remove or tamper with the JWT signature and check if the application accepts it.
+  - **Example**:
+    ```json
+    {
+      "alg": "none"
+    }
+    ```
+    Send this unsigned token and observe if access is still granted.
+
+- [ ] **2. None Algorithm Bypass**
+  - **Vulnerability**: The server accepts JWTs signed with the `none` algorithm, which bypasses signature verification.
+  - **Test**: Change the `alg` header to `none` and remove the signature, then try to use the token.
+  - **Example**:
+    ```json
+    {
+      "alg": "none"
+    }
+    ```
+    Token: 
+    ```
+    eyJhbGciOiJub25lIn0.eyJpc3MiOiJleGFtcGxlIn0.
+    ```
+
+- [ ] **3. Weak Secret Key (HS256)**
+  - **Vulnerability**: Weak or guessable HMAC secret key is used for signing JWTs.
+  - **Test**: Attempt to brute-force the HMAC secret using tools like `hashcat` or `jwt-cracker`.
+  - **Example**:
+    ```bash
+    hashcat -a 0 -m 16500 <jwt_token> <wordlist>
+    ```
+
+- [ ] **4. Algorithm Confusion (RS256 to HS256)**
+  - **Vulnerability**: Switching the algorithm from `RS256` (asymmetric) to `HS256` (symmetric) and signing with the server's public key.
+  - **Test**: Modify the algorithm in the header from `RS256` to `HS256`, then sign the token with the server's public key as the HMAC secret.
+  - **Example**:
+    Original header:
+    ```json
+    {
+      "alg": "RS256"
+    }
+    ```
+    Modified header:
+    ```json
+    {
+      "alg": "HS256"
+    }
+    ```
+
+- [ ] **5. Algorithm Confusion Attacks**
+  - **Vulnerability**: Attackers exploit algorithm confusion by forcing the server to verify a JWT using a different algorithm than intended.
+  - **Test**: Change the `alg` header from `RS256` to `HS256`, sign the token using the server’s public key as the HMAC secret, and attempt to use the token.
+
+- [ ] **6. Key Injection via `kid` Header**
+  - **Vulnerability**: Key ID (`kid`) parameter is vulnerable to directory traversal or arbitrary file inclusion, allowing signature bypass.
+  - **Test**: Try injecting file paths into the `kid` parameter, e.g., `/dev/null`, and sign the token with an empty key.
+  - **Example**:
+    ```json
+    {
+      "kid": "../../../../../../dev/null",
+      "alg": "HS256"
+    }
+    ```
+
+- [ ] **7. JWK Header Injection**
+  - **Vulnerability**: Injecting a custom public key via the `jwk` header to trick the server into verifying the token using the attacker's key.
+  - **Test**: Add a `jwk` parameter containing an attacker’s public key in the JWT header.
+  - **Example**:
+    ```json
+    {
+      "alg": "RS256",
+      "jwk": {
+        "kty": "RSA",
+        "n": "<your-public-key-modulus>",
+        "e": "AQAB"
+      }
+    }
+    ```
+
+- [ ] **8. JWK Set URL (`jku`) Injection**
+  - **Vulnerability**: The `jku` header allows the server to retrieve a malicious key set from an arbitrary URL controlled by the attacker.
+  - **Test**: Insert a custom `jku` header pointing to a malicious JWK Set hosted on a controlled server.
+  - **Example**:
+    ```json
+    {
+      "alg": "RS256",
+      "jku": "http://attacker.com/jwks.json"
+    }
+    ```
+
+- [ ] **9. Replay Attack**
+  - **Vulnerability**: JWTs are reused without proper invalidation, leading to session hijacking.
+  - **Test**: Capture a valid JWT and try reusing it after the user logs out or the session should be invalid.
+  - **Example**: Replay the same JWT after a logout event. If the server still accepts it, the application is vulnerable.
+
+- [ ] **10. Expired or Invalid Token Acceptance**
+  - **Vulnerability**: The server accepts expired or tampered tokens without proper validation.
+  - **Test**: Modify the `exp` (expiration) claim to a past time or tamper with claims and check if the token is still valid.
+  - **Example**:
+    ```json
+    {
+      "exp": 1600000000
+    }
+    ```
+
+- [ ] **11. JWT Stored in Local Storage (XSS Risk)**
+  - **Vulnerability**: Storing JWTs in browser local storage exposes them to XSS attacks.
+  - **Test**: Look for JWTs stored in local storage using browser developer tools or attempt an XSS payload injection.
+  - **Example**: If an XSS vulnerability exists, an attacker can execute:
+    ```javascript
+    console.log(localStorage.getItem("jwt_token"));
+    ```
+
+- [ ] **12. JWT in URL (Leakage via Referrer Headers)**
+  - **Vulnerability**: Storing JWTs in URLs (e.g., as a query parameter) exposes them to referrer leakage.
+  - **Test**: Check if the JWT is passed in the URL, and inspect HTTP headers to see if the referrer leaks the token.
+  - **Example**:
+    ```
+    https://example.com?token=eyJhbGciOi...
+    ```
+
+- [ ] **13. Insecure Token Revocation**
+  - **Vulnerability**: The server does not properly revoke JWTs, allowing them to remain valid even after logout or expiration.
+  - **Test**: Attempt to reuse a token after the session is terminated, and check if it is still accepted.
+  - **Example**: Use a captured JWT after the user has logged out and observe if access is still granted.
+
+---
+
+## How to Prevent JWT Attacks
+
+- [ ] **Use an up-to-date JWT library**
+- [ ] **Enforce strict signature verification**
+- [ ] **Restrict the `jku` header**
+- [ ] **Secure the `kid` header**
+- [ ] **Set expiration dates for tokens**
+- [ ] **Avoid sending tokens via URL parameters**
+- [ ] **Use the `aud` claim**
+- [ ] **Enable token revocation**

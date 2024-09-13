@@ -1,0 +1,47 @@
+
+# API Penetration Testing Checklist
+
+## 1. API Recon
+- [ ] Identify API endpoints (e.g., `/api/books`, `/api/books/mystery`).
+- [ ] Analyze input data the API processes (compulsory and optional parameters).
+- [ ] Determine the types of requests the API accepts (HTTP methods, media formats).
+- [ ] Check rate limits and authentication mechanisms.
+- [ ] Review API documentation (human-readable and machine-readable formats).
+- [ ] Use tools like Burp Scanner to crawl and audit APIs.
+- [ ] Check for API documentation endpoints (e.g., `/swagger/index.html`, `/openapi.json`).
+
+## 2. API Endpoint Interaction
+- [ ] Interact with API endpoints using Burp Repeater and Burp Intruder.
+- [ ] Test for error messages and unexpected behaviors.
+- [ ] Test different HTTP methods (GET, POST, PATCH, DELETE, OPTIONS).
+- [ ] Test for changes in behavior based on HTTP method.
+- [ ] Modify `Content-Type` header to test different content types (JSON, XML).
+- [ ] Use the Content type converter to change between formats (XML, JSON).
+
+## 3. Hidden Endpoints Discovery
+- [ ] Use Burp Intruder to find hidden endpoints.
+- [ ] Add a payload to common path positions to identify hidden resources (e.g., `/api/user/update` -> `/api/user/delete`).
+- [ ] Use wordlists of common API naming conventions and industry terms to find hidden endpoints.
+
+## 4. Hidden Parameters Discovery
+- [ ] Use Burp Intruder to replace/add common parameters to requests.
+- [ ] Use Param miner BApp to guess up to 65,536 parameter names per request.
+- [ ] Use Burp’s content discovery tools to find hidden parameters in APIs.
+
+## 5. Mass Assignment Vulnerability Testing
+- [ ] Check returned objects for hidden parameters (e.g., `isAdmin`, `id`).
+- [ ] Modify hidden parameters in the request body (e.g., `isAdmin = true`).
+- [ ] Test invalid values for hidden parameters and observe API responses.
+
+## 6. Preventing Vulnerabilities in APIs
+- [ ] Secure API documentation if the API is not publicly accessible.
+- [ ] Keep API documentation up to date.
+- [ ] Apply an allowlist of permitted HTTP methods.
+- [ ] Validate expected content types for all API requests and responses.
+- [ ] Use generic error messages to prevent information disclosure.
+- [ ] Ensure security measures are applied to all API versions, not just the production version.
+- [ ] Implement allowlists and blocklists to control which properties can be updated by users.
+
+## Tools and Techniques
+- Burp Suite (Scanner, Repeater, Intruder, Param miner, Content type converter)
+- Postman, SoapUI for interacting and testing APIs
